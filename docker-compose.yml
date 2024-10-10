@@ -15,5 +15,4 @@ services:
     build:
         context: .
     volumes:
-      - .:/var/www/html
       - ./cache:/var/www/html/lib/business-ru/business-online-sdk-php/src/cache
