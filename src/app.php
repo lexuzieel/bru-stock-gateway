@@ -1,8 +1,5 @@
 <?php
 
-// ini_set('display_errors', 'off');
-ini_set('error_log', '/proc/self/fd/2');
-
 require __DIR__ . '/../vendor/autoload.php';
 
 use \bru\api\Client;
@@ -22,6 +19,4 @@ $api = new Client(
 
 $stores = $api->request('get', 'stores');
 
-var_dump(
-    $api->request('get', 'stores')
-);
+var_dump(json_encode($stores));
