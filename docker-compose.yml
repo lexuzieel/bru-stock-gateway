@@ -12,6 +12,7 @@ services:
       - php
 
   php:
-    image: php:8.2-fpm
+    build:
+        context: .
     volumes:
       - .:/var/www/html
