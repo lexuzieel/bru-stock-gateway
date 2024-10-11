@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     image: nginx:latest
@@ -15,4 +13,4 @@ services:
     build:
         context: .
     volumes:
-      - ./cache:/var/www/html/lib/business-ru/business-online-sdk-php/src/cache
+      - ./storage/cache:/var/www/html/lib/business-ru/business-online-sdk-php/src/cache

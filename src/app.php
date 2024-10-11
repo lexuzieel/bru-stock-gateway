@@ -1,22 +1,25 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+namespace App;
 
-use \bru\api\Client;
+use DI\Container;
+use Slim\Factory\AppFactory;
+use Slim\Factory\ServerRequestCreatorFactory;
 
-$dotenv = Dotenv\Dotenv::createImmutable(__DIR__ . '/..');
-$dotenv->load();
+AppFactory::setSlimHttpDecoratorsAutomaticDetection(false);
+ServerRequestCreatorFactory::setSlimHttpDecoratorsAutomaticDetection(false);
 
-$bru_account = $_ENV['BRU_ACCOUNT'];
-$bru_app_id = $_ENV['BRU_APP_ID'];
-$bru_app_secret = $_ENV['BRU_APP_SECRET'];
+$container = new Container();
 
-$api = new Client(
-    $bru_account,
-    $bru_app_id,
-    $bru_app_secret,
-);
+// Load service definitions
+(require __DIR__ . '/services.php')($container);
 
-$stores = $api->request('get', 'stores');
+$app = AppFactory::createFromContainer($container);
 
-var_dump(json_encode($stores));
+// Load middleware
+(require __DIR__ . '/middleware.php')($app);
+
+// Load routes
+(require __DIR__ . '/routes.php')($app);
+
+$app->run();
