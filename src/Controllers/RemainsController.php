@@ -23,7 +23,7 @@ class RemainsController
             throw new \Exception('API request failed');
         }
 
-        $items = $result['result'];
+        $items = $result['result'] ?? [];
 
         $substrings = $request->getQueryParams()['store'] ?? [];
 
@@ -32,11 +32,11 @@ class RemainsController
             foreach ($substrings as $substring) {
                 if (
                     strpos(
-                        mb_strtolower($item['name']),
+                        mb_strtolower($item['name'] ?? ''),
                         mb_strtolower($substring)
                     ) !== false
                 ) {
-                    return $item['deleted'] == false;
+                    return ($item['deleted'] ?? true) == false;
                 }
             }
 
@@ -45,7 +45,7 @@ class RemainsController
 
         // Map the filtered and sorted items to get their IDs
         $ids = array_map(function ($item) {
-            return $item['id'];
+            return $item['id'] ?? '';
         }, $filteredItems);
 
         return $ids;
@@ -88,7 +88,10 @@ class RemainsController
         $name = implode(', ', $parts);
 
         foreach ($modifications as $modification) {
-            if (mb_strtolower($modification['name']) == mb_strtolower($name)) {
+            if (
+                mb_strtolower($modification['name'] ?? '') ==
+                mb_strtolower($name)
+            ) {
                 return $modification;
             }
         }
@@ -106,22 +109,22 @@ class RemainsController
             foreach ($modification['remains'] ?? [] as $remain) {
                 $remains[] = [
                     'store' => [
-                        'id' => $remain['store']['id'],
-                        'name' => $remain['store']['name'],
+                        'id' => $remain['store']['id'] ?? '',
+                        'name' => $remain['store']['name'] ?? '',
                     ],
                     'amount' => (int)($remain['amount']['total'] ?? 0),
                 ];
             }
 
             $remains = array_filter($remains, function ($remain) use ($stores) {
-                return in_array($remain['store']['id'], $stores);
+                return in_array($remain['store']['id'] ?? '', $stores);
             });
 
             // Sort remains by store name alphabetically
             usort($remains, function ($a, $b) {
                 return strcmp(
-                    mb_strtolower($a['store']['name']),
-                    mb_strtolower($b['store']['name'])
+                    mb_strtolower($a['store']['name'] ?? ''),
+                    mb_strtolower($b['store']['name'] ?? '')
                 );
             });
 
