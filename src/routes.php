@@ -3,8 +3,8 @@
 namespace App;
 
 use Slim\App;
-use App\Controllers\StockController;
+use App\Controllers\RemainsController;
 
 return function (App $app) {
-    $app->get('/stock', [StockController::class, 'index']);
+    $app->get('/remains', [RemainsController::class, 'index']);
 };
