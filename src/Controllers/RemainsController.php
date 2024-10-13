@@ -15,7 +15,7 @@ class RemainsController
         $this->api = $api;
     }
 
-    protected function getStoreIds(Request $request)
+    protected function getStores(Request $request)
     {
         $result = $this->api->request('get', 'stores');
 
@@ -73,8 +73,10 @@ class RemainsController
         return $items[0] ?? null;
     }
 
-    protected function getModification(Request $request, ?array $product)
+    protected function getModification(Request $request)
     {
+        $product = $this->getProduct($request);
+
         $modifications = $product['modifications'] ?? [];
 
         $variant = $request->getQueryParams()['variant'] ?? [];
@@ -97,36 +99,42 @@ class RemainsController
         }
     }
 
+    protected function getRemains(Request $request)
+    {
+        $stores = $this->getStores($request);
+        $modification = $this->getModification($request);
+
+        $remains = [];
+
+        foreach ($modification['remains'] ?? [] as $remain) {
+            $remains[] = [
+                'store' => [
+                    'id' => $remain['store']['id'] ?? '',
+                    'name' => $remain['store']['name'] ?? '',
+                ],
+                'amount' => (int)($remain['amount']['total'] ?? 0),
+            ];
+        }
+
+        $remains = array_filter($remains, function ($remain) use ($stores) {
+            return in_array($remain['store']['id'] ?? '', $stores);
+        });
+
+        // Sort remains by store name alphabetically
+        usort($remains, function ($a, $b) {
+            return strcmp(
+                mb_strtolower($a['store']['name'] ?? ''),
+                mb_strtolower($b['store']['name'] ?? '')
+            );
+        });
+
+        return $remains;
+    }
+
     public function index(Request $request, Response $response)
     {
         try {
-            $stores = $this->getStoreIds($request);
-            $product = $this->getProduct($request);
-            $modification = $this->getModification($request, $product);
-
-            $remains = [];
-
-            foreach ($modification['remains'] ?? [] as $remain) {
-                $remains[] = [
-                    'store' => [
-                        'id' => $remain['store']['id'] ?? '',
-                        'name' => $remain['store']['name'] ?? '',
-                    ],
-                    'amount' => (int)($remain['amount']['total'] ?? 0),
-                ];
-            }
-
-            $remains = array_filter($remains, function ($remain) use ($stores) {
-                return in_array($remain['store']['id'] ?? '', $stores);
-            });
-
-            // Sort remains by store name alphabetically
-            usort($remains, function ($a, $b) {
-                return strcmp(
-                    mb_strtolower($a['store']['name'] ?? ''),
-                    mb_strtolower($b['store']['name'] ?? '')
-                );
-            });
+            $remains = $this->getRemains($request);
 
             $response->getBody()->write(json_encode([
                 'result' => [
