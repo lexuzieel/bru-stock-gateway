@@ -6,6 +6,14 @@ use App\Services\BusinessRuApi;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 
+class RemainsOptions
+{
+    public function __construct(
+        public bool $actualAmount = true,
+        public int $manyThresholdAmount = 5,
+    ) {}
+}
+
 class RemainsController
 {
     private $api;
@@ -99,21 +107,38 @@ class RemainsController
         }
     }
 
-    protected function getRemains(Request $request)
-    {
+    protected function getRemains(
+        Request $request,
+        RemainsOptions $options = null,
+    ) {
         $stores = $this->getStores($request);
         $modification = $this->getModification($request);
 
         $remains = [];
 
         foreach ($modification['remains'] ?? [] as $remain) {
-            $remains[] = [
+            $entry = [
                 'store' => [
                     'id' => $remain['store']['id'] ?? '',
                     'name' => $remain['store']['name'] ?? '',
                 ],
-                'amount' => (int)($remain['amount']['total'] ?? 0),
             ];
+
+            $amount = (int) $remain['amount']['total'] ?? 0;
+
+            if ($options?->actualAmount) {
+                $entry['amount'] = $amount;
+            } else {
+                if ($amount >= $options?->manyThresholdAmount ?? 0) {
+                    $entry['quantity'] = 'many';
+                } else if ($amount > 0) {
+                    $entry['quantity'] = 'few';
+                } else {
+                    $entry['quantity'] = 'empty';
+                }
+            }
+
+            $remains[] = $entry;
         }
 
         $remains = array_filter($remains, function ($remain) use ($stores) {
@@ -134,7 +159,10 @@ class RemainsController
     public function index(Request $request, Response $response)
     {
         try {
-            $remains = $this->getRemains($request);
+            $remains = $this->getRemains($request, new RemainsOptions(
+                actualAmount: false,
+                manyThresholdAmount: 5,
+            ));
 
             $response->getBody()->write(json_encode([
                 'result' => [
