@@ -2,7 +2,7 @@ services:
   web:
     image: nginx:latest
     ports:
-      - "8080:80"
+      - "${PORT:-80}:80"
     volumes:
       - .:/var/www/html
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
@@ -12,5 +12,6 @@ services:
   php:
     build:
         context: .
+    env_file: .env
     volumes:
       - ./storage/cache:/var/www/html/lib/business-ru/business-online-sdk-php/src/cache
