@@ -14,6 +14,14 @@ class RemainsOptions
     ) {}
 }
 
+class Store
+{
+    public function __construct(
+        public string $id,
+        public string $name,
+    ) {}
+}
+
 class RemainsController
 {
     private $api;
@@ -51,15 +59,19 @@ class RemainsController
             return false;
         });
 
-        // Map the filtered and sorted items to get their IDs
-        $ids = array_map(function ($item) {
-            return $item['id'] ?? '';
-        }, $filteredItems);
-
-        return $ids;
+        // Return filtered items
+        return array_values(array_map(function ($item) {
+            return new Store(id: $item['id'], name: $item['name']);
+        }, $filteredItems));
     }
 
-    protected function getProduct(Request $request)
+    /**
+     * Returns a product with given SKU or null if not found.
+     * @param Request $request
+     * @return array|null
+     * @throws \Exception
+     */
+    protected function getProduct(Request $request): array|null
     {
         $sku = $request->getQueryParams()['sku'] ?? null;
 
@@ -81,10 +93,18 @@ class RemainsController
         return $items[0] ?? null;
     }
 
+    /**
+     * @param Request $request
+     *
+     * @return array|null
+     */
     protected function getModification(Request $request)
     {
         $product = $this->getProduct($request);
 
+        /**
+         * @var array
+         */
         $modifications = $product['modifications'] ?? [];
 
         $variants = $request->getQueryParams()['variant'] ?? [];
@@ -129,6 +149,39 @@ class RemainsController
         }
     }
 
+    /**
+     * Returns the amount of items in the given store for the current modification
+     *
+     * @param Store $store
+     * @return int
+     */
+    protected function getAmount(Store $store, ?array $modification)
+    {
+        foreach ($modification['remains'] ?? [] as $remains) {
+            if (($remains['store']['id'] ?? '') == $store->id) {
+                return (int) $remains['amount']['total'] ?? 0;
+            }
+        }
+
+        return 0;
+    }
+
+    protected function getQuantity(
+        Store $store,
+        ?array $modification,
+        RemainsOptions $options = null,
+    ) {
+        $amount = $this->getAmount($store, $modification);
+
+        if ($amount >= $options?->manyThresholdAmount ?? 0) {
+            return 'many';
+        } else if ($amount > 0) {
+            return 'few';
+        } else {
+            return 'empty';
+        }
+    }
+
     protected function getRemains(
         Request $request,
         RemainsOptions $options = null,
@@ -138,34 +191,22 @@ class RemainsController
 
         $remains = [];
 
-        foreach ($modification['remains'] ?? [] as $remain) {
+        foreach ($stores as $store) {
             $entry = [
                 'store' => [
-                    'id' => $remain['store']['id'] ?? '',
-                    'name' => $remain['store']['name'] ?? '',
+                    'id' => $store->id,
+                    'name' => $store->name,
                 ],
             ];
 
-            $amount = (int) $remain['amount']['total'] ?? 0;
-
             if ($options?->actualAmount) {
-                $entry['amount'] = $amount;
+                $entry['amount'] = $this->getAmount($store, $modification);
             } else {
-                if ($amount >= $options?->manyThresholdAmount ?? 0) {
-                    $entry['quantity'] = 'many';
-                } else if ($amount > 0) {
-                    $entry['quantity'] = 'few';
-                } else {
-                    $entry['quantity'] = 'empty';
-                }
+                $entry['quantity'] = $this->getQuantity($store, $modification, $options);
             }
 
             $remains[] = $entry;
         }
-
-        $remains = array_filter($remains, function ($remain) use ($stores) {
-            return in_array($remain['store']['id'] ?? '', $stores);
-        });
 
         // Sort remains by store name alphabetically
         usort($remains, function ($a, $b) {
