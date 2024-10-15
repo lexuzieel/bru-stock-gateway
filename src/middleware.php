@@ -36,7 +36,7 @@ function configCors(App $app)
 function guardWithApiKey(App $app)
 {
     $app->add(function (Request $request, $handler) {
-        $apiKey = $request->getHeaderLine('X-Api-Key') ?? '';
+        $apiKey = $request->getQueryParams()['key'] ?? '';
 
         if ($apiKey != ($_ENV['API_KEY'] ?? '')) {
             $response = new Response();
@@ -45,14 +45,13 @@ function guardWithApiKey(App $app)
             return $response->withStatus(401);
         }
 
-        $response = $handler->handle($request);
-        return $response;
+        return $handler->handle($request);
     });
 }
 
 return function (App $app) {
     $app->addErrorMiddleware(
-        ($_ENV['APP_PRODUCTION'] ?? '') != 'production',
+        ($_ENV['APP_ENV'] ?? '') != 'production',
         true,
         true
     );
