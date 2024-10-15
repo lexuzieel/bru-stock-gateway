@@ -28,8 +28,25 @@ function configCors(App $app)
 
         return $response
             ->withHeader('Access-Control-Allow-Origin', $origin)
-            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+            ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, X-Api-Key')
             ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+    });
+}
+
+function guardWithApiKey(App $app)
+{
+    $app->add(function (Request $request, $handler) {
+        $apiKey = $request->getHeaderLine('X-Api-Key') ?? '';
+
+        if ($apiKey != ($_ENV['API_KEY'] ?? '')) {
+            $response = new Response();
+            $response->getBody()->write('invalid api key');
+
+            return $response->withStatus(401);
+        }
+
+        $response = $handler->handle($request);
+        return $response;
     });
 }
 
@@ -41,4 +58,5 @@ return function (App $app) {
     );
 
     configCors($app);
+    guardWithApiKey($app);
 };
