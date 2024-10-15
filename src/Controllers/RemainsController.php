@@ -87,21 +87,43 @@ class RemainsController
 
         $modifications = $product['modifications'] ?? [];
 
-        $variant = $request->getQueryParams()['variant'] ?? [];
+        $variants = $request->getQueryParams()['variant'] ?? [];
 
-        $parts = [];
+        $contains = [];
 
-        foreach ($variant as $key => $value) {
-            $parts[] = "$key: $value";
+        foreach ($variants as $key => $value) {
+            $contains[] = mb_strtolower($key);
+            $contains[] = mb_strtolower($value);
         }
 
-        $name = implode(', ', $parts);
+        /**
+         * Check if all words in $contains are exact substrings of $name.
+         *
+         * Returns false if any word is not found, true if all words
+         * are found as substrings.
+         *
+         * @param string $string
+         * @param array $contains
+         *
+         * @return bool
+         */
+        function matchExactSubstrings($string, $contains)
+        {
+            foreach ($contains as $word) {
+                // Check if the word is an exact substring of the name
+                if (strpos($string, $word) === false) {
+                    // Return false if any word is not found
+                    return false;
+                }
+            }
+            // All words found as substrings
+            return true;
+        }
 
         foreach ($modifications as $modification) {
-            if (
-                mb_strtolower($modification['name'] ?? '') ==
-                mb_strtolower($name)
-            ) {
+            $name = mb_strtolower($modification['name'] ?? '');
+
+            if (matchExactSubstrings($name, $contains)) {
                 return $modification;
             }
         }
