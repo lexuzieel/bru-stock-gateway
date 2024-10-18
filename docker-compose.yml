@@ -8,6 +8,7 @@ services:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
     depends_on:
       - php
+    restart: unless-stopped
 
   php:
     build:
@@ -15,3 +16,4 @@ services:
     env_file: .env
     volumes:
       - ./storage/cache:/var/www/html/lib/business-ru/business-online-sdk-php/src/cache
+    restart: unless-stopped
